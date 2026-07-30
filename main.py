@@ -7,6 +7,7 @@ import schemas
 from database import engine, SessionLocal
 
 from passlib.context import CryptContext
+import ai_agent
 from ai_agent import analyze_gap
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -492,4 +493,170 @@ def get_readiness_summary(db: Session = Depends(get_db)):
         "ready_students": ready_list,
         "not_ready_students": not_ready_list,
         "not_evaluated_students": not_evaluated_list,
+    }
+
+# ==========================================
+# ADMIN REGISTER (naya admin banane ke liye)
+# ==========================================
+@app.post("/admin/register", response_model=schemas.AdminResponse)
+def register_admin(admin: schemas.AdminCreate, db: Session = Depends(get_db)):
+    existing = db.query(models.Admin).filter(models.Admin.username == admin.username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Admin username already exists")
+
+    new_admin = models.Admin(
+        username=admin.username,
+        password=hash_password(admin.password)
+    )
+    db.add(new_admin)
+    db.commit()
+    db.refresh(new_admin)
+    return new_admin
+
+# ==========================================
+# ADMIN LOGIN
+# ==========================================
+@app.post("/admin/login", response_model=schemas.AdminResponse)
+def login_admin(credentials: schemas.AdminLogin, db: Session = Depends(get_db)):
+    admin = db.query(models.Admin).filter(models.Admin.username == credentials.username).first()
+    if not admin:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    if not verify_password(credentials.password, admin.password):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    return admin
+
+# ==========================================
+# INTERVIEW - VIOLATION FLAG (Auto-Reject)
+# ==========================================
+@app.put("/interview/{interview_id}/flag-violation")
+def flag_violation(interview_id: int, reason: str, db: Session = Depends(get_db)):
+    interview = db.query(models.Interview).filter(models.Interview.id == interview_id).first()
+    if not interview:
+        raise HTTPException(status_code=404, detail="Interview not found")
+
+    interview.status = "disqualified"
+    interview.violation_reason = reason
+    interview.ai_feedback = f"Interview disqualified automatically. Reason: {reason}"
+
+    student = db.query(models.Student).filter(models.Student.id == interview.student_id).first()
+    if student:
+        student.interview_status = "disqualified"
+
+    db.commit()
+    db.refresh(interview)
+
+    return {
+        "id": interview.id,
+        "student_id": interview.student_id,
+        "status": interview.status,
+        "violation_reason": interview.violation_reason,
+    }
+
+# ==========================================
+# INTERVIEW - SCREEN SHARE STATUS UPDATE KARNA
+# ==========================================
+@app.put("/interview/{interview_id}/screen-share-status")
+def update_screen_share(interview_id: int, screen_shared: bool, db: Session = Depends(get_db)):
+    interview = db.query(models.Interview).filter(models.Interview.id == interview_id).first()
+    if not interview:
+        raise HTTPException(status_code=404, detail="Interview not found")
+
+    interview.screen_shared = screen_shared
+    db.commit()
+    db.refresh(interview)
+
+    return {
+        "id": interview.id,
+        "screen_shared": interview.screen_shared,
+    }
+
+# ============================================
+# INTERVIEW - SCREEN SHARE STATUS UPDATE
+# ============================================
+@app.put("/interview/{interview_id}/screen-share")
+def update_screen_share(interview_id: int, screen_shared: bool, db: Session = Depends(get_db)):
+    interview = db.query(models.Interview).filter(models.Interview.id == interview_id).first()
+    if not interview:
+        raise HTTPException(status_code=404, detail="Interview not found")
+
+    interview.screen_shared = screen_shared
+    db.commit()
+    db.refresh(interview)
+
+    return {
+        "id": interview.id,
+        "screen_shared": interview.screen_shared
+    }
+
+
+# ============================================
+# INTERVIEW - SUBMIT ANSWER (AI-check + Evaluation)
+# ============================================
+@app.post("/interview/{interview_id}/submit-answer")
+def submit_answer(interview_id: int, question_text: str, student_answer: str, db: Session = Depends(get_db)):
+    interview = db.query(models.Interview).filter(models.Interview.id == interview_id).first()
+    if not interview:
+        raise HTTPException(status_code=404, detail="Interview not found")
+
+    # Step 1: AI-generated check
+    is_suspicious = ai_agent.detect_ai_generated_answer(question_text, student_answer)
+
+    if is_suspicious:
+        interview.status = "disqualified"
+        interview.violation_reason = "AI-generated answer detected"
+        db.commit()
+        db.refresh(interview)
+        return {
+            "id": interview.id,
+            "status": interview.status,
+            "violation_reason": interview.violation_reason,
+            "score": None
+        }
+
+    # Step 2: Genuine answer -> evaluate correctness
+    score = ai_agent.evaluate_interview_answer(question_text, student_answer)
+
+    interview.total_score = (interview.total_score or 0) + score
+    interview.answers_count = (interview.answers_count or 0) + 1
+    db.commit()
+    db.refresh(interview)
+
+    return {
+        "id": interview.id,
+        "status": interview.status,
+        "answer_score": score,
+        "total_score": interview.total_score,
+        "answers_count": interview.answers_count
+    }
+
+# ==========================================
+# ADMIN - VIOLATIONS / DISQUALIFIED LIST
+# ==========================================
+@app.get("/admin/violations")
+def get_violations(db: Session = Depends(get_db)):
+    disqualified_interviews = db.query(models.Interview).filter(
+        models.Interview.status == "disqualified"
+    ).all()
+
+    violations_list = []
+    for interview in disqualified_interviews:
+        student = db.query(models.Student).filter(
+            models.Student.id == interview.student_id
+        ).first()
+
+        violations_list.append({
+            "interview_id": interview.id,
+            "student_id": interview.student_id,
+            "student_name": student.name if student else "Unknown",
+            "roll_number": student.roll_number if student else "Unknown",
+            "violation_reason": interview.violation_reason,
+            "screen_shared": interview.screen_shared,
+            "camera_verified": interview.camera_verified,
+        })
+
+    return {
+        "total_disqualified": len(violations_list),
+        "violations": violations_list,
     }

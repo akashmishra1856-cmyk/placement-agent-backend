@@ -67,3 +67,18 @@ class Interview(Base):
     
     status = Column(String, default="pending")         # "pending", "completed", "disqualified"
     ai_feedback = Column(String, nullable=True)         # AI ka overall feedback interview pe
+    violation_reason = Column(String, nullable=True)   # kyu reject hua (jaise "Face not visible for 60+ seconds")
+    screen_shared = Column(Boolean, default=False)      # screen share on tha ya nahi
+    total_score = Column(Integer, default=0)
+    answers_count = Column(Integer, default=0)
+
+
+class Admin(Base):
+    __tablename__ = "admins"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    password = Column(String)
+
+total_score = Column(Integer, default=0)
+answers_count = Column(Integer, default=0)

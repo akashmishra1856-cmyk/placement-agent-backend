@@ -52,3 +52,19 @@ class CompanyResponse(CompanyCreate):
 
     class Config:
         from_attributes = True
+
+
+class AdminCreate(BaseModel):
+    username: str
+    password: str
+
+class AdminLogin(BaseModel):
+    username: str
+    password: str
+
+class AdminResponse(BaseModel):
+    id: int
+    username: str
+
+    class Config:
+        from_attributes = True
