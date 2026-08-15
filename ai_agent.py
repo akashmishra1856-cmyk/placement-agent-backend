@@ -1,11 +1,40 @@
 import os
+import time
 from dotenv import load_dotenv
 from google import genai
+from google.genai import errors as genai_errors
 
 load_dotenv()
 
 api_key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
+
+
+def generate_content_with_retry(model: str, contents: str, max_retries: int = 4, base_delay: float = 3.0):
+    """
+    Gemini API ko call karta hai, aur agar 503 (overloaded) ya koi
+    temporary server error aaye, toh thoda ruk kar dobara try karta hai.
+    Isse "high demand" wala error users tak nahi pahunchta.
+    """
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=contents
+            )
+            return response
+        except genai_errors.ServerError as e:
+            last_error = e
+            wait_time = base_delay * (attempt + 1)  # 3s, 6s, 9s, 12s
+            print(f"Gemini overloaded (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s...")
+            time.sleep(wait_time)
+        except Exception as e:
+            # Koi aur error ho toh turant raise karo, retry mat karo
+            raise e
+
+    # Saare retries fail ho gaye
+    raise last_error
 
 
 def analyze_gap(student_skills: str, required_skills: str, cgpa: float, min_cgpa: float, quiz_score, interview_status):
@@ -22,7 +51,7 @@ Give the student a short, friendly, encouraging improvement plan (3-4 bullet poi
 to become placement-ready. Be specific and practical.
 """
 
-    response = client.models.generate_content(
+    response = generate_content_with_retry(
         model="gemini-flash-latest",
         contents=prompt
     )
@@ -41,7 +70,7 @@ Ask ONE relevant interview question for this role. Keep it natural and conversat
 Return ONLY the question, nothing else.
 """
 
-    response = client.models.generate_content(
+    response = generate_content_with_retry(
         model="gemini-flash-latest",
         contents=prompt
     )
@@ -60,7 +89,7 @@ Give a short feedback summary (2-3 sentences) covering the candidate's communica
 and technical depth. Be honest but encouraging.
 """
 
-    response = client.models.generate_content(
+    response = generate_content_with_retry(
         model="gemini-flash-latest",
         contents=prompt
     )
@@ -78,7 +107,7 @@ Score this answer from 0 to 10 based on correctness and clarity.
 Return ONLY the number, nothing else. No explanation, no words, just the digit(s).
 """
 
-    response = client.models.generate_content(
+    response = generate_content_with_retry(
         model="gemini-flash-latest",
         contents=prompt
     )
@@ -115,7 +144,7 @@ Respond with ONLY one word: "SUSPICIOUS" if it looks AI-generated, or "GENUINE" 
 like a natural human answer. No explanation, just one word.
 """
 
-    response = client.models.generate_content(
+    response = generate_content_with_retry(
         model="gemini-flash-latest",
         contents=prompt
     )
@@ -134,7 +163,7 @@ Score this answer from 0 to 10 based on technical correctness, clarity, and rele
 Return ONLY the number, nothing else. No explanation, just the digit(s).
 """
 
-    response = client.models.generate_content(
+    response = generate_content_with_retry(
         model="gemini-flash-latest",
         contents=prompt
     )
