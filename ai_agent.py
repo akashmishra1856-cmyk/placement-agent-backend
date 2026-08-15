@@ -9,6 +9,9 @@ load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
 
+# Naya, high-quota model use kar rahe hain (1000-1500 requests/day free tier pe)
+MODEL_NAME = "gemini-2.5-flash-lite"
+
 
 def generate_content_with_retry(model: str, contents: str, max_retries: int = 4, base_delay: float = 3.0):
     """
@@ -52,7 +55,7 @@ to become placement-ready. Be specific and practical.
 """
 
     response = generate_content_with_retry(
-        model="gemini-flash-latest",
+        model=MODEL_NAME,
         contents=prompt
     )
 
@@ -71,7 +74,7 @@ Return ONLY the question, nothing else.
 """
 
     response = generate_content_with_retry(
-        model="gemini-flash-latest",
+        model=MODEL_NAME,
         contents=prompt
     )
 
@@ -90,7 +93,7 @@ and technical depth. Be honest but encouraging.
 """
 
     response = generate_content_with_retry(
-        model="gemini-flash-latest",
+        model=MODEL_NAME,
         contents=prompt
     )
 
@@ -108,7 +111,7 @@ Return ONLY the number, nothing else. No explanation, no words, just the digit(s
 """
 
     response = generate_content_with_retry(
-        model="gemini-flash-latest",
+        model=MODEL_NAME,
         contents=prompt
     )
 
@@ -145,7 +148,7 @@ like a natural human answer. No explanation, just one word.
 """
 
     response = generate_content_with_retry(
-        model="gemini-flash-latest",
+        model=MODEL_NAME,
         contents=prompt
     )
 
@@ -164,7 +167,7 @@ Return ONLY the number, nothing else. No explanation, just the digit(s).
 """
 
     response = generate_content_with_retry(
-        model="gemini-flash-latest",
+        model=MODEL_NAME,
         contents=prompt
     )
 
