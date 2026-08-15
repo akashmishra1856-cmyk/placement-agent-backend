@@ -10,7 +10,7 @@ api_key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
 
 # Naya, high-quota model use kar rahe hain (1000-1500 requests/day free tier pe)
-MODEL_NAME = "gemini-2.5-flash-lite"
+MODEL_NAME = "gemini-3.1-flash-lite"
 
 
 def generate_content_with_retry(model: str, contents: str, max_retries: int = 4, base_delay: float = 3.0):
