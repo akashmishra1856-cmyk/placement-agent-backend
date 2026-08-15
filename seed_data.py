@@ -1,6 +1,6 @@
 import requests
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "https://placement-agent-backend.onrender.com"
 
 # ==========================================
 # 1. COMPANIES ADD KARO
