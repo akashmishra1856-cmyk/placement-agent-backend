@@ -7,10 +7,11 @@ An AI-powered backend that helps students check their placement readiness. Stude
 ## Tech Stack
 
 - **Backend:** FastAPI (Python)
-- **Database:** SQLite + SQLAlchemy
+- **Database:** PostgreSQL + SQLAlchemy ORM (SQLite fallback for local development)
 - **AI:** Google Gemini API (`google-genai`)
 - **Validation:** Pydantic
 - **Auth:** Bcrypt password hashing
+- **Deployment:** Render (backend + PostgreSQL)
 
 ## Features
 
@@ -21,6 +22,8 @@ An AI-powered backend that helps students check their placement readiness. Stude
 - Automatic readiness check (Ready / Not Ready + reasons)
 - AI-generated personalized improvement advice (gap analysis)
 - Admin dashboard summary endpoint (batch-wide Ready/Not-Ready view)
+- Admin authentication, interview violation flagging, and screen-share tracking
+- Automatic retry handling for AI API rate limits/overload
 
 ## Running Locally
 
