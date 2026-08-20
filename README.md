@@ -1,7 +1,5 @@
 # AI Placement Readiness Agent
 
-Brainwave 2026 Hackathon — Problem Statement 3 (Open Innovation)
-
 An AI-powered backend that helps students check their placement readiness. Students register, set their company/role preference, take a role-based quiz, and go through a text-based AI interview. The system automatically evaluates CGPA, quiz score, interview performance, and skill match to mark a student **Ready** or **Not Ready**, with a personalized AI-generated improvement plan. Admins get a batch-wide readiness summary.
 
 ## Tech Stack
